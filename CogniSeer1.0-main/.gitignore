@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.venv/
+robot_brain_fp32.pt
+robot_brain_int8.ts
+datasets/processed/
+deploy/

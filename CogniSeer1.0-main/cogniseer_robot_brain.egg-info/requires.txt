@@ -1,0 +1,6 @@
+numpy>=1.26.0
+jsonschema>=4.22.0
+torch>=2.2.0
+
+[dev]
+pytest>=8.2.0

@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cogniseer-robot-brain"
+version = "0.1.0"
+description = "CogniSeer edge robot brain with validated data and deployment pipeline"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [
+  { name = "CogniSeer Contributors" }
+]
+dependencies = [
+  "numpy>=1.26.0",
+  "jsonschema>=4.22.0",
+  "torch>=2.2.0"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2.0"
+]
+
+[project.scripts]
+cogniseer-train = "train_brain:main"
+cogniseer-export = "quantize_brain:main"
+cogniseer-smoke = "scripts.deployment_smoke_test:main"
+
+[tool.setuptools]
+py-modules = [
+  "app_config",
+  "artifact_metadata",
+  "benchmark_torch_brain",
+  "brain_torch",
+  "data_pipeline",
+  "edge_robot_brain",
+  "edge_runtime",
+  "observability",
+  "quantize_brain",
+  "resonance_core",
+  "ros2_robot_brain_node",
+  "safety_layer",
+  "torch_edge_robot_brain",
+  "train_brain"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["robot_brain_ros2*", "scripts*"]

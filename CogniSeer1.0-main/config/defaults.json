@@ -1,0 +1,29 @@
+{
+  "model": {
+    "grid_h": 16,
+    "grid_w": 16,
+    "input_dim": 32,
+    "hidden_dim": 64,
+    "motor_dim": 8,
+    "dt": 0.02,
+    "use_field_enhanced_snn": false,
+    "chaos_reduction_enabled": true
+  },
+  "train": {
+    "raw_data": "datasets/raw/robot_telemetry.jsonl",
+    "dataset_dir": "datasets/processed",
+    "dataset_name": "robot_telemetry",
+    "eval_ratio": 0.2,
+    "epochs": 10,
+    "batch_size": 32,
+    "checkpoint": "robot_brain_fp32.pt",
+    "lr": 0.001
+  },
+  "export": {
+    "checkpoint": "robot_brain_fp32.pt",
+    "output_dir": "deploy",
+    "validate_steps": 128,
+    "max_abs_error": 0.35,
+    "seed": 1234
+  }
+}

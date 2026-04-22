@@ -1,0 +1,36 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: CogniSeer1.0-main
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Make
+        run: sudo apt-get update && sudo apt-get install -y make
+
+      - name: Install Locked Dependencies
+        run: make install-lock
+
+      - name: Install Package
+        run: make install
+
+      - name: Run Tests
+        run: make test
+
+      - name: Run Smoke
+        run: make smoke

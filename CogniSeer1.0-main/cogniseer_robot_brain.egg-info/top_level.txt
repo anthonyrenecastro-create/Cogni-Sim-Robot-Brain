@@ -1,0 +1,12 @@
+benchmark_torch_brain
+brain_torch
+data_pipeline
+edge_robot_brain
+edge_runtime
+quantize_brain
+resonance_core
+robot_brain_ros2
+ros2_robot_brain_node
+safety_layer
+torch_edge_robot_brain
+train_brain

@@ -1,0 +1,4 @@
+[console_scripts]
+cogniseer-export = quantize_brain:main
+cogniseer-smoke = scripts.deployment_smoke_test:main
+cogniseer-train = train_brain:main
