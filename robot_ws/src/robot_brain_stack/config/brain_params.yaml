@@ -1,0 +1,47 @@
+goal_manager:
+  ros__parameters:
+    mission_db_path: /tmp/robot_brain_missions.db
+
+object_memory:
+  ros__parameters:
+    db_path: /tmp/robot_object_memory.db
+
+recovery_manager:
+  ros__parameters: {}
+
+safety_layer:
+  ros__parameters:
+    max_linear: 0.5
+    max_angular: 1.2
+    max_linear_delta: 0.05
+    max_angular_delta: 0.1
+
+executive_context:
+  ros__parameters:
+    tick_hz: 5.0
+    brain_input_dim: 32
+    domain: default
+    brain_python_path: /workspaces/Cogni-Sim-Robot-Brain/CogniSeer1.0-main
+    brain_checkpoint: /workspaces/Cogni-Sim-Robot-Brain/CogniSeer1.0-main/robot_brain_fp32.pt
+
+bt_executor:
+  ros__parameters:
+    use_nav2: true
+    nav_action_name: /navigate_to_pose
+    nav_frame: map
+    low_battery_threshold: 0.2
+    dock_x: 0.0
+    dock_y: 0.0
+    dock_yaw: 0.0
+    failure_injection_enabled: false
+    failure_injection_rate: 0.0
+
+health_monitor:
+  ros__parameters:
+    stability_warn_threshold: 0.45
+    stability_critical_threshold: 0.25
+    heartbeat_timeout_sec: 3.0
+
+watchdog:
+  ros__parameters:
+    timeout_sec: 4.0
