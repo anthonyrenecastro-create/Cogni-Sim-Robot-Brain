@@ -49,14 +49,22 @@ make help
 make env
 make install
 make install-lock
+make install-dev-lock
+make lint
+make typecheck
+make security
 make test
 make smoke
+make smoke-release
 ```
 
 Smoke target parameters can be overridden:
 
 ```bash
 make smoke MODEL_PATH=deploy/robot_brain_int8_stateful.pt MANIFEST_PATH=deploy/deployment_manifest.json SMOKE_STEPS=16 SMOKE_SEED=123
+
+# Strict release smoke gate (no auto-bootstrap)
+make smoke-release MODEL_PATH=deploy/robot_brain_int8_stateful.pt MANIFEST_PATH=deploy/deployment_manifest.json
 ```
 
 `make smoke` includes failure handling and can auto-bootstrap a deterministic smoke bundle when artifacts are missing.
@@ -76,7 +84,11 @@ Each log line includes a UTC timestamp, level, event name, and metrics fields (f
 CI is defined in `.github/workflows/ci.yml` and uses the same Make targets as local development:
 
 - `make install-lock`
+- `make install-dev-lock`
 - `make install`
+- `make lint`
+- `make typecheck`
+- `make security`
 - `make test`
 - `make smoke`
 
@@ -85,6 +97,13 @@ This keeps local and CI command paths identical.
 ## Deployment Flow
 
 Full step-by-step deployment instructions — including ROS2 workspace build, parameter configuration, topic verification, and artifact compatibility notes — are in [DEPLOYMENT.md](DEPLOYMENT.md).
+
+Production policy and governance references:
+
+- `docs/PRODUCTION_ACCEPTANCE.md`
+- `docs/ENVIRONMENT_TOPOLOGY.md`
+- `docs/SECURITY_COMPLIANCE_BASELINE.md`
+- `docs/RELEASE_GOVERNANCE.md`
 
 Quick reference:
 

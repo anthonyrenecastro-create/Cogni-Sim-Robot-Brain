@@ -274,7 +274,7 @@ def _split_records(records: List[Dict[str, object]], eval_ratio: float):
 
     for record in records:
         key = str(record.get("record_id") or json.dumps(record, sort_keys=True))
-        frac = int(hashlib.sha1(key.encode("utf-8")).hexdigest()[:8], 16) / 0xFFFFFFFF
+        frac = int(hashlib.sha256(key.encode("utf-8")).hexdigest()[:8], 16) / 0xFFFFFFFF
         if frac < eval_ratio:
             eval_records.append(record)
         else:

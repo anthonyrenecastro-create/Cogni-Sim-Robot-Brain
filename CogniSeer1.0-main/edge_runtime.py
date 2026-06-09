@@ -92,7 +92,7 @@ class EdgeRuntimeBrain:
             dtype=torch.qint8,
         )
 
-        payload = torch.load(model_path, map_location="cpu", weights_only=False)
+        payload = torch.load(model_path, map_location="cpu", weights_only=True)
         if not isinstance(payload, dict) or "state_dict" not in payload or "metadata" not in payload:
             raise RuntimeError("Invalid artifact payload: missing state_dict and metadata")
 

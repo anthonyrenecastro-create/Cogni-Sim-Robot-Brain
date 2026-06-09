@@ -492,7 +492,11 @@ class EdgeRobotBrain:
         obs shape: [input_dim]
         """
         obs = np.asarray(obs, dtype=np.float32)
-        assert obs.shape == (self.cfg.input_dim,)
+        expected = (self.cfg.input_dim,)
+        if obs.shape != expected:
+            raise ValueError(
+                f"Expected observation shape {expected}, got {obs.shape}."
+            )
 
         sensory_map = self._obs_to_map(obs)
         self.fields.step(sensory_map)

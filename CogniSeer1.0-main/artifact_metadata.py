@@ -1,6 +1,7 @@
 import hashlib
 import json
 import platform
+from pathlib import Path
 from datetime import datetime, timezone
 from typing import Dict, Any
 
@@ -28,6 +29,11 @@ def model_signature_from_cfg(cfg_dict: Dict[str, Any]) -> str:
 
 
 def build_metadata(cfg_dict: Dict[str, Any], checkpoint_path: str) -> Dict[str, Any]:
+    requirements_lock = Path("requirements.lock")
+    lock_sha256 = None
+    if requirements_lock.exists():
+        lock_sha256 = hashlib.sha256(requirements_lock.read_bytes()).hexdigest()
+
     return {
         "artifact_format": ARTIFACT_FORMAT,
         "schema_version": ARTIFACT_SCHEMA_VERSION,
@@ -37,5 +43,8 @@ def build_metadata(cfg_dict: Dict[str, Any], checkpoint_path: str) -> Dict[str, 
         "source_checkpoint": checkpoint_path,
         "producer": {
             "python": platform.python_version(),
+            "platform": platform.platform(),
+            "python_implementation": platform.python_implementation(),
+            "requirements_lock_sha256": lock_sha256,
         },
     }

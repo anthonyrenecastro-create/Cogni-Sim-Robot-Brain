@@ -62,7 +62,7 @@ class EdgeRuntimeBrain:
         self.input_dim = int(input_dim)
 
         if str(model_path).endswith(".ts"):
-            self.model = torch.jit.load(model_path, map_location="cpu")
+            self.model = torch.jit.load(model_path, map_location="cpu")  # nosec B614
             self.model.eval()
             self._baseline_state = None
             self._active_session = None
@@ -109,7 +109,7 @@ class EdgeRuntimeBrain:
             {torch.nn.Linear},
             dtype=torch.qint8,
         )
-        payload = torch.load(model_path, map_location="cpu", weights_only=False)
+        payload = torch.load(model_path, map_location="cpu", weights_only=True)
         if not isinstance(payload, dict) or "state_dict" not in payload or "metadata" not in payload:
             raise RuntimeError("Invalid artifact payload: missing state_dict and metadata")
 

@@ -1,0 +1,10 @@
+{
+  "train": {
+    "epochs": 2,
+    "batch_size": 16
+  },
+  "export": {
+    "validate_steps": 32,
+    "max_abs_error": 0.5
+  }
+}

@@ -26,8 +26,20 @@ jobs:
       - name: Install Locked Dependencies
         run: make install-lock
 
+      - name: Install Dev Tooling
+        run: make install-dev-lock
+
       - name: Install Package
         run: make install
+
+      - name: Lint
+        run: make lint
+
+      - name: Typecheck
+        run: make typecheck
+
+      - name: Security Scan
+        run: make security
 
       - name: Run Tests
         run: make test
