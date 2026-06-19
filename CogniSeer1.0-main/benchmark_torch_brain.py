@@ -6,7 +6,7 @@ import torch
 from torch_edge_robot_brain import TorchBrainConfig, TorchEdgeRobotBrain
 
 
-def run_single(mode_name: str, enable_chaos: bool, steps: int, warmup: int):
+def run_single(mode_name: str, enable_chaos: bool, steps: int, warmup: int, auto_chaos: bool = False):
     cfg = TorchBrainConfig(
         input_dim=32,
         hidden_dim=64,
@@ -19,6 +19,7 @@ def run_single(mode_name: str, enable_chaos: bool, steps: int, warmup: int):
     )
     model = TorchEdgeRobotBrain(cfg).eval()
     model.set_chaos_control(enable_chaos)
+    model.configure_auto_chaos(enabled=auto_chaos)
     model.reset_state(batch_size=1)
 
     x = torch.randn(1, cfg.input_dim)
@@ -45,12 +46,16 @@ def run_single(mode_name: str, enable_chaos: bool, steps: int, warmup: int):
         "res_chaos_reduction": round(float(y["res_chaos_reduction"].mean()), 4),
         "res_lyapunov_proxy": round(float(y["res_lyapunov_proxy"].mean()), 4),
         "action_confidence": round(float(y["action_confidence"].mean()), 4),
+        "chaos_enabled": round(float(y["chaos_enabled"].mean()), 4),
+        "auto_chaos_enabled": round(float(y["auto_chaos_enabled"].mean()), 4),
+        "auto_chaos_risk": round(float(y["auto_chaos_risk"].mean()), 4),
+        "auto_chaos_strength": round(float(y["auto_chaos_strength"].mean()), 4),
     }
 
 
 def main():
     parser = argparse.ArgumentParser(description="Benchmark CogniSeer torch brain")
-    parser.add_argument("--mode", choices=["on", "off", "both"], default="both")
+    parser.add_argument("--mode", choices=["on", "off", "auto", "both"], default="both")
     parser.add_argument("--steps", type=int, default=2000)
     parser.add_argument("--warmup", type=int, default=200)
     parser.add_argument("--runs", type=int, default=1)
@@ -59,8 +64,8 @@ def main():
     if args.runs < 1:
         raise ValueError("--runs must be >= 1")
 
-    def aggregate(mode_name: str, enable_chaos: bool):
-        rows = [run_single(mode_name, enable_chaos, args.steps, args.warmup) for _ in range(args.runs)]
+    def aggregate(mode_name: str, enable_chaos: bool, auto_chaos: bool = False):
+        rows = [run_single(mode_name, enable_chaos, args.steps, args.warmup, auto_chaos=auto_chaos) for _ in range(args.runs)]
         if len(rows) == 1:
             return rows[0]
         sps = [r["steps_per_sec"] for r in rows]
@@ -81,10 +86,16 @@ def main():
         print(aggregate("chaos_off", False))
         return
 
+    if args.mode == "auto":
+        print(aggregate("chaos_auto", False, auto_chaos=True))
+        return
+
     on = aggregate("chaos_on", True)
     off = aggregate("chaos_off", False)
+    auto = aggregate("chaos_auto", False, auto_chaos=True)
     print(on)
     print(off)
+    print(auto)
     print(
         {
             "mode": "delta_on_minus_off",

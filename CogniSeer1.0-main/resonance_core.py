@@ -134,6 +134,7 @@ class ResonanceField(nn.Module):
     def __init__(self, cfg: ResonanceConfig):
         super().__init__()
         self.cfg = cfg
+        self.chaos_strength = 1.0
 
         self.register_buffer("phi", torch.zeros(1, 1, cfg.grid_h, cfg.grid_w))
         self.register_buffer("stability", torch.ones(1))
@@ -147,6 +148,10 @@ class ResonanceField(nn.Module):
         self.gamma_amp = nn.Parameter(torch.tensor(cfg.gamma_amp))
         self.control_gain = nn.Parameter(torch.tensor(cfg.control_gain))
         self.chaos_controller = ChaosReductionController(cfg)
+
+    def set_chaos_strength(self, strength: float):
+        # Strength scales the extra damping gain above 1.0.
+        self.chaos_strength = max(0.0, float(strength))
 
     def reset_state(self, batch_size=1, device="cpu"):
         self.phi = torch.zeros(batch_size, 1, self.cfg.grid_h, self.cfg.grid_w, device=device)
@@ -208,6 +213,7 @@ class ResonanceField(nn.Module):
             chaos_reduction = chaos["chaos_reduction"]
             lyapunov_proxy = chaos["lyapunov_proxy"]
             damping_gain = chaos["damping_gain"]
+            damping_gain = 1.0 + self.chaos_strength * (damping_gain - 1.0)
 
         # linear feedback control when unstable
         unstable = stability < self.cfg.stability_threshold

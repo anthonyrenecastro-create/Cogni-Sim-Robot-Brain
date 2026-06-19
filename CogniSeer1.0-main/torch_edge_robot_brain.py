@@ -253,6 +253,18 @@ class TorchEdgeRobotBrain(nn.Module):
         self.memory_decay = 0.98
         self.action_decay = 0.90
 
+        # Optional adaptive chaos control with hysteresis to avoid mode flapping.
+        self.auto_chaos_enabled = False
+        self.auto_chaos_risk_ema = 0.0
+        self.auto_chaos_success_ema = 1.0
+        self.auto_chaos_task_risk_ema = 0.0
+        self.auto_chaos_task_success_signal = None
+        self.auto_chaos_task_risk_signal = None
+        self.auto_chaos_ema_alpha = 0.20
+        self.auto_chaos_on_threshold = 0.55
+        self.auto_chaos_off_threshold = 0.35
+        self.auto_chaos_strength_scale = 1.0
+
     def reset_state(self, batch_size=1, device="cpu"):
         self.memory_state = torch.zeros(batch_size, self.cfg.hidden_dim, device=device)
         self.spike_mem = torch.zeros(batch_size, self.cfg.hidden_dim, device=device)
@@ -260,6 +272,11 @@ class TorchEdgeRobotBrain(nn.Module):
         self.fields.phi = torch.zeros(batch_size, 10, self.cfg.grid_h, self.cfg.grid_w, device=device)
         self.resonance.reset_state(batch_size=batch_size, device=device)
         self.field_enhanced_snn.reset_state(device=device)
+        self.auto_chaos_risk_ema = 0.0
+        self.auto_chaos_success_ema = 1.0
+        self.auto_chaos_task_risk_ema = 0.0
+        self.auto_chaos_task_success_signal = None
+        self.auto_chaos_task_risk_signal = None
 
     def detach_state(self):
         # Truncated BPTT: keep state values while dropping old graph history.
@@ -269,6 +286,68 @@ class TorchEdgeRobotBrain(nn.Module):
 
     def set_chaos_control(self, enabled: bool):
         self.resonance.cfg.chaos_reduction_enabled = bool(enabled)
+
+    def set_chaos_strength(self, strength: float):
+        self.resonance.set_chaos_strength(strength)
+
+    def set_auto_chaos_context(self, success_signal=None, risk_signal=None):
+        self.auto_chaos_task_success_signal = None if success_signal is None else float(success_signal)
+        self.auto_chaos_task_risk_signal = None if risk_signal is None else float(risk_signal)
+
+    def configure_auto_chaos(
+        self,
+        enabled: bool,
+        on_threshold: float = 0.55,
+        off_threshold: float = 0.35,
+        ema_alpha: float = 0.20,
+        strength_scale: float = 1.0,
+    ):
+        self.auto_chaos_enabled = bool(enabled)
+        self.auto_chaos_on_threshold = float(on_threshold)
+        self.auto_chaos_off_threshold = float(off_threshold)
+        self.auto_chaos_ema_alpha = float(ema_alpha)
+        self.auto_chaos_strength_scale = max(0.0, float(strength_scale))
+
+        if self.auto_chaos_off_threshold > self.auto_chaos_on_threshold:
+            self.auto_chaos_off_threshold = self.auto_chaos_on_threshold
+
+    def _auto_chaos_update(self, rs):
+        if not self.auto_chaos_enabled:
+            return 0.0
+
+        stability = float(rs["stability"].mean().detach().cpu().item())
+        variance = float(rs["variance"].mean().detach().cpu().item())
+
+        # Prefer task-level success/risk context when the caller supplies it.
+        if self.auto_chaos_task_success_signal is None:
+            task_success_raw = stability
+        else:
+            task_success_raw = max(0.0, min(1.0, self.auto_chaos_task_success_signal))
+
+        if self.auto_chaos_task_risk_signal is None:
+            task_risk_raw = max(0.0, min(1.0, 0.65 * variance + 0.35 * (1.0 - stability)))
+        else:
+            task_risk_raw = max(0.0, min(1.0, self.auto_chaos_task_risk_signal))
+
+        # Risk is now driven by smoothed task success/risk, with resonance as a fallback input.
+        risk_raw = max(0.0, min(1.0, 0.55 * (1.0 - task_success_raw) + 0.45 * task_risk_raw))
+        a = max(0.01, min(1.0, self.auto_chaos_ema_alpha))
+        self.auto_chaos_risk_ema = (1.0 - a) * self.auto_chaos_risk_ema + a * risk_raw
+        self.auto_chaos_success_ema = (1.0 - a) * self.auto_chaos_success_ema + a * task_success_raw
+        self.auto_chaos_task_risk_ema = (1.0 - a) * self.auto_chaos_task_risk_ema + a * task_risk_raw
+
+        current_enabled = bool(self.resonance.cfg.chaos_reduction_enabled)
+        if (not current_enabled) and self.auto_chaos_risk_ema >= self.auto_chaos_on_threshold:
+            self.set_chaos_control(True)
+        elif current_enabled and self.auto_chaos_risk_ema <= self.auto_chaos_off_threshold:
+            self.set_chaos_control(False)
+
+        # Strength scales with excess risk above the off-threshold.
+        denom = max(1e-6, self.auto_chaos_on_threshold - self.auto_chaos_off_threshold)
+        normalized = (self.auto_chaos_risk_ema - self.auto_chaos_off_threshold) / denom
+        auto_strength = self.auto_chaos_strength_scale * max(0.0, min(1.5, normalized))
+        self.set_chaos_strength(auto_strength)
+        return auto_strength
 
     def forward(self, obs):
         batch_size = obs.shape[0]
@@ -280,6 +359,7 @@ class TorchEdgeRobotBrain(nn.Module):
         # Main CogniSeer field and resonance/stability sidecar.
         _, fs = self.fields(sensory_map)
         rs = self.resonance(sensory_map)
+        auto_strength = self._auto_chaos_update(rs)
 
         percept = self.perception(obs)
 
@@ -356,6 +436,12 @@ class TorchEdgeRobotBrain(nn.Module):
             "res_chaos_reduction": rs["chaos_reduction"],
             "res_lyapunov_proxy": rs["lyapunov_proxy"],
             "action_confidence": confidence.mean(dim=-1),
+            "chaos_enabled": torch.full_like(rs["stability"], float(self.resonance.cfg.chaos_reduction_enabled)),
+            "auto_chaos_enabled": torch.full_like(rs["stability"], float(self.auto_chaos_enabled)),
+            "auto_chaos_risk": torch.full_like(rs["stability"], float(self.auto_chaos_risk_ema)),
+            "auto_chaos_success": torch.full_like(rs["stability"], float(self.auto_chaos_success_ema)),
+            "auto_chaos_task_risk": torch.full_like(rs["stability"], float(self.auto_chaos_task_risk_ema)),
+            "auto_chaos_strength": torch.full_like(rs["stability"], float(auto_strength)),
         }
         if relay_signal is not None:
             telemetry["relay_signal_norm"] = relay_signal.norm(dim=-1).mean(dim=-1)
