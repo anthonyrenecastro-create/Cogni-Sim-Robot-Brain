@@ -1,6 +1,40 @@
 # CogniSeer1.0
 Prototype for an edge-computing robot brain
 
+---
+
+## 🚀 Quick Start
+
+**For training & local development** (ROS2 NOT required):
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.lock && pip install -e .
+python train_brain.py  # Start training
+```
+
+**For ROS2 robot deployment** (ROS2 required):
+- First: Follow [docs/ROS2_SETUP.md](docs/ROS2_SETUP.md)
+- Then: [DEPLOYMENT.md](DEPLOYMENT.md)
+- **See [docs/PACKAGE_ARCHITECTURE.md](docs/PACKAGE_ARCHITECTURE.md)** for canonical runtime path
+
+**Note**: ROS2 is optional. You can train, export, and test models without it. ROS2 is only needed for deploying on ROS2-enabled robots.
+
+---
+
+## 📦 Package Architecture
+
+**This folder** (`CogniSeer1.0-main/robot_brain_ros2/`) is the **canonical ROS2 runtime package** for production deployment.
+
+There is also a separate development/simulation stack at `robot_ws/src/robot_brain_stack/` for full-featured development.
+
+**Quick answer**:
+- **Deploy to robot?** → Use `robot_brain_ros2` (this folder) ✅
+- **Develop/simulate?** → Use `robot_ws/src/robot_brain_stack` (separate workspace)
+
+See [docs/PACKAGE_ARCHITECTURE.md](docs/PACKAGE_ARCHITECTURE.md) for detailed comparison and when to use each.
+
+---
+
 ## Packaging And Reproducible Environments
 
 This repository now includes:

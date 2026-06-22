@@ -1,6 +1,8 @@
 import csv
 import hashlib
 import json
+import logging
+import warnings
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -9,6 +11,8 @@ from typing import Dict, Iterable, List, Tuple
 import torch
 from jsonschema import Draft202012Validator
 from torch.utils.data import Dataset
+
+logger = logging.getLogger(__name__)
 
 
 SCHEMA_VERSION = "1.0.0"
@@ -85,6 +89,17 @@ def build_or_load_versioned_dataset(
         raise ValueError(f"No records found in raw dataset: {raw_path}")
 
     _validate_records(records, input_dim=input_dim, motor_dim=motor_dim)
+
+    # Check dataset adequacy for SNN training
+    is_adequate, adequacy_warnings = _check_dataset_adequacy(
+        records, input_dim=input_dim, motor_dim=motor_dim
+    )
+    for warning_msg in adequacy_warnings:
+        warnings.warn(warning_msg, category=UserWarning, stacklevel=2)
+    if is_adequate:
+        logger.info(f"Dataset adequacy check passed: {len(records)} samples")
+    else:
+        logger.warning(f"Dataset adequacy check failed: {len(records)} samples")
 
     fingerprint = _fingerprint_dataset(
         raw_path=raw_path,
@@ -209,6 +224,65 @@ def _validate_records(records: List[Dict[str, object]], input_dim: int, motor_di
             raise ValueError(
                 f"Record {idx} has motor_target length {len(target)} but expected {motor_dim}."
             )
+
+
+def _check_dataset_adequacy(
+    records: List[Dict[str, object]], input_dim: int, motor_dim: int
+) -> Tuple[bool, List[str]]:
+    """
+    Check if dataset meets minimum requirements for robust policy training.
+
+    Returns:
+        (is_adequate, list_of_warnings_and_guidance)
+
+    Note: Field-enhanced SNNs with chaos reduction require more training data
+    than simple MLPs. See docs/DATASET_REQUIREMENTS.md for details.
+    """
+    n_samples = len(records)
+    warnings_list = []
+    is_adequate = True
+
+    # Minimum sample guidelines
+    minimum_recommended = max(10000, input_dim * motor_dim * 50)  # SNN-specific scaling
+    critical_minimum = 1000
+
+    if n_samples < critical_minimum:
+        warnings_list.append(
+            f"⚠️  CRITICAL: Dataset has {n_samples} samples, but minimum viable is {critical_minimum}. "
+            f"Training will likely overfit severely. See docs/DATASET_REQUIREMENTS.md."
+        )
+        is_adequate = False
+    elif n_samples < minimum_recommended:
+        warnings_list.append(
+            f"⚠️  WARNING: Dataset has {n_samples} samples. For robust policy with field-enhanced SNN, "
+            f"recommend ≥{minimum_recommended} samples. Risk of overfitting. "
+            f"See docs/DATASET_REQUIREMENTS.md for data collection strategies."
+        )
+        is_adequate = False
+
+    # Check for trajectory diversity (variance in observations)
+    observations = torch.tensor([r["observation"] for r in records], dtype=torch.float32)
+    obs_stds = observations.std(dim=0)
+    low_variance_dims = (obs_stds < 0.01).nonzero(as_tuple=True)[0].tolist()
+
+    if low_variance_dims:
+        warnings_list.append(
+            f"ℹ️  INFO: Observation dimensions {low_variance_dims} have low variance (<0.01). "
+            f"Dataset may not cover full state space. Collect more diverse trajectories."
+        )
+
+    # Check for control diversity
+    motor_targets = torch.tensor([r["motor_target"] for r in records], dtype=torch.float32)
+    motor_stds = motor_targets.std(dim=0)
+    low_control_dims = (motor_stds < 0.01).nonzero(as_tuple=True)[0].tolist()
+
+    if low_control_dims:
+        warnings_list.append(
+            f"ℹ️  INFO: Motor dimensions {low_control_dims} have low variance (<0.01). "
+            f"Limited control command diversity in dataset."
+        )
+
+    return is_adequate, warnings_list
 
 
 def _fingerprint_dataset(

@@ -2,19 +2,40 @@
 
 End-to-end steps for training, exporting, and running the INT8-quantized edge brain on a ROS2-enabled robot.
 
+**📍 This guide is for the canonical ROS2 runtime package** (`robot_brain_ros2/`).
+
+For full-featured development with simulation, behavior trees, and Nav2, see `robot_ws/src/robot_brain_stack/` and [docs/PACKAGE_ARCHITECTURE.md](docs/PACKAGE_ARCHITECTURE.md).
+
 ---
 
-## Prerequisites
+## ⚠️ Important: ROS2 Dependency
 
-| Requirement | Version | Notes |
+**ROS2 is OPTIONAL.** It is required only for deployment on ROS2-enabled robots.
+
+| What You're Doing | ROS2 Required? | Read This First |
 |---|---|---|
-| Python | 3.12 | Pinned via `.python-version` |
-| PyTorch | ≥ 2.2.0 | CPU-only build is sufficient for inference |
-| NumPy | ≥ 1.26.0 | |
-| ROS2 | Humble or Iron | `ament_python` build system |
-| colcon | any | `sudo apt install python3-colcon-common-extensions` |
+| **Train models locally** | ❌ No | [Skip to Step 1](#step-1-prepare-the-raw-dataset) |
+| **Export/quantize models** | ❌ No | [Skip to Step 1](#step-1-prepare-the-raw-dataset) |
+| **Run smoke tests** | ❌ No | [Skip to Step 1](#step-1-prepare-the-raw-dataset) |
+| **Deploy on ROS2 robot** | ✅ **Yes** | [docs/ROS2_SETUP.md](ROS2_SETUP.md) first, then continue here |
 
-Install Python dependencies:
+**For development (training, export, testing)**: ROS2 is NOT required. You can safely ignore it.
+
+**For production deployment**: Install and configure ROS2 first. See [docs/ROS2_SETUP.md](ROS2_SETUP.md).
+
+---
+
+## Prerequisites for Training (No ROS2 Required)
+
+| Requirement | Version | Required? | Notes |
+|---|---|---|---|
+| Python | 3.12 | ✅ Yes | Pinned via `.python-version` |
+| PyTorch | ≥ 2.2.0 | ✅ Yes | CPU-only build sufficient |
+| NumPy | ≥ 1.26.0 | ✅ Yes | Installed via requirements |
+| ROS2 | Humble or Iron | ⚠️ Optional | Only for ROS2 robot deployment |
+| colcon | any | ⚠️ Optional | Only for ROS2 workspace builds |
+
+### Environment Setup (No ROS2)
 
 ```bash
 python -m venv .venv
@@ -29,6 +50,20 @@ Or with conda:
 conda env create -f environment.yml
 conda activate cogniseer-robot-brain
 pip install -e .
+```
+
+### Environment Setup (With ROS2)
+
+If deploying to a ROS2 robot, see [docs/ROS2_SETUP.md](ROS2_SETUP.md) **before continuing**.
+
+Quick check:
+```bash
+# Verify ROS2 is installed and environment is active
+echo $ROS_DISTRO  # Should print: humble or iron
+
+# Verify project is installed
+python -c "import train_brain; print('✓ Project OK')"
+python -c "import rclpy; print('✓ ROS2 OK')"
 ```
 
 ---
@@ -46,6 +81,26 @@ Each line must be a JSON object matching the schema (see [README.md](README.md#r
   "motor_target": [0.0, "... 8 floats total ..."]
 }
 ```
+
+### Dataset Size Requirements
+
+⚠️ **Important**: The sample dataset included in this repository (320 samples) is a proof-of-concept and **insufficient for production training**.
+
+**Minimum requirements**:
+- **Quick validation**: 1,000+ samples (acceptable for initial testing, expect overfitting)
+- **Recommended**: 10,000+ samples (good generalization)
+- **Optimal**: 50,000+ samples (excellent robustness for field-enhanced SNN)
+
+**Check your dataset**:
+```bash
+python scripts/check_data_distribution.py --input datasets/raw/robot_telemetry.jsonl
+```
+
+**Expand insufficient datasets**:
+- **Quick augmentation** (validation only): `python scripts/augment_telemetry.py --input datasets/raw/robot_telemetry.jsonl --output datasets/raw/augmented.jsonl --multiplier 10`
+- **Merge multiple runs**: `python scripts/merge_telemetry.py --inputs datasets/raw/trajectory_*.jsonl --output datasets/raw/merged.jsonl`
+
+See [docs/DATASET_REQUIREMENTS.md](docs/DATASET_REQUIREMENTS.md) for complete guidance on data collection and augmentation strategies.
 
 ---
 

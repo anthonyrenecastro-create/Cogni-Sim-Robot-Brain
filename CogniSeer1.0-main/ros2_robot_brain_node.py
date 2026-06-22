@@ -1,10 +1,32 @@
 #!/usr/bin/env python3
-import numpy as np
-import rclpy
+"""
+ROS2-based robot brain node — publishes safe velocity commands.
 
-from rclpy.node import Node
-from std_msgs.msg import Float32MultiArray
-from geometry_msgs.msg import Twist
+This module requires ROS2 to be installed and available on the system.
+It is NOT required for standalone training, export, or smoke testing.
+
+If ROS2 is not available, import will fail with a clear error message.
+See docs/ROS2_SETUP.md for installation instructions.
+"""
+
+import sys
+
+try:
+    import rclpy
+    from rclpy.node import Node
+    from std_msgs.msg import Float32MultiArray
+    from geometry_msgs.msg import Twist
+except ImportError as e:
+    raise ImportError(
+        "ROS2 is not installed or not available in this Python environment. "
+        "This module (ros2_robot_brain_node.py) requires ROS2. "
+        "Install ROS2 according to https://docs.ros.org/en/humble/Installation.html, "
+        "then activate the ROS2 environment before using this module. "
+        "For standalone training/export without ROS2, use train_brain.py and quantize_brain.py instead. "
+        f"Original import error: {e}"
+    ) from e
+
+import numpy as np
 
 from edge_runtime import EdgeRuntimeBrain
 from safety_layer import ActuationSafetyLayer, SafetyConfig

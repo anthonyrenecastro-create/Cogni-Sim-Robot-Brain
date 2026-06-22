@@ -2,16 +2,30 @@
 <package format="3">
   <name>robot_brain_ros2</name>
   <version>0.1.0</version>
-  <description>CogniSeer edge robot brain — ROS2 node that runs an INT8-quantized PyTorch brain model and publishes safe velocity commands to /cmd_vel.</description>
+  <description>CogniSeer edge robot brain — ROS2 node that runs an INT8-quantized PyTorch brain model and publishes safe velocity commands to /cmd_vel. Includes sensor integration, transforms, and safety layers.</description>
   <maintainer email="anthonyrenecastro-create@users.noreply.github.com">anthonyrenecastro-create</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>ament_python</buildtool_depend>
 
+  <!-- Core ROS2 dependencies -->
   <exec_depend>rclpy</exec_depend>
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>std_srvs</exec_depend>
+  
+  <!-- Transforms and visualization -->
+  <exec_depend>tf2</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>tf2_tools</exec_depend>
+  
+  <!-- Python dependencies -->
   <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-opencv</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>cv-bridge</exec_depend>
 
   <export>
     <build_type>ament_python</build_type>

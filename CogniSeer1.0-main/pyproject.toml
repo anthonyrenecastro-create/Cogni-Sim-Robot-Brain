@@ -19,7 +19,25 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# ROS2 optional dependency — required only for deployment on ROS2 robots
+# Install with: pip install -e ".[ros2]"
+# Note: ROS2 cannot be installed via pip; must be installed separately.
+# See docs/ROS2_SETUP.md for installation instructions.
+ros2 = [
+  # ROS2 packages are system dependencies, not pip packages
+  # This group is for documentation and distinguishing use cases only
+]
+
 dev = [
+  "pytest>=8.2.0",
+  "ruff>=0.12.0",
+  "mypy>=1.16.0",
+  "bandit>=1.8.3",
+  "pip-audit>=2.9.0"
+]
+
+# Full dependencies for development with all optional features
+all = [
   "pytest>=8.2.0",
   "ruff>=0.12.0",
   "mypy>=1.16.0",
